@@ -1,5 +1,6 @@
 # fifo-calculator
-Basic implementation of FIFO calculator for portfolio management
+Basic implementation of FIFO calculator for portfolio management. This takes a .csv file as input creates a .out file in the same folder.
+
 ## Usage
 ```
 usage: fifo.py [-h] file_name
