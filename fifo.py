@@ -44,6 +44,7 @@ def get_output(file_name):
     print('\nSuccessfully saved output to file: %s' % (output_file_name))
 
 def get_portfolio_data(file_name):
+    # read file
     try:
         df = pd.read_csv(file_name)
     except IOError:
@@ -70,7 +71,6 @@ def get_portfolio_data(file_name):
                 }
 
             current_prices[row['ASSET']] = row['PRICE']
-
             transactions[row['ASSET']] = deque()
             transactions[row['ASSET']].append([row['AMOUNT'], row['PRICE']])
 
@@ -84,13 +84,20 @@ def get_portfolio_data(file_name):
                 amount_left = -row['AMOUNT']
                 while amount_left > 0:
                     try:
+                        # FIFO: remove the first added transaction
                         earliest_transaction = transactions[row['ASSET']].popleft()
+                        
+                        # remove entire transaction if removing more than amount left
                         if amount_left >= earliest_transaction[0]:
                             amount_left -= earliest_transaction[0]
-                            current_realized_pl[row['ASSET']] += earliest_transaction[0] * (row['PRICE'] - earliest_transaction[1])
+                            current_realized_pl[row['ASSET']] += earliest_transaction[0] \
+                                * (row['PRICE'] - earliest_transaction[1])
+                        
+                        # add back part of transaction if left over after removing amount left
                         else:
                             earliest_transaction[0] -= amount_left
-                            current_realized_pl[row['ASSET']] += amount_left * (row['PRICE'] - earliest_transaction[1])
+                            current_realized_pl[row['ASSET']] += amount_left \
+                                * (row['PRICE'] - earliest_transaction[1])
                             transactions[row['ASSET']].appendleft(earliest_transaction)
                             break
                     except IndexError:
@@ -104,6 +111,7 @@ def get_portfolio_data(file_name):
     nonzero_assets = 0
     for asset in transactions:
         if len(transactions[asset]) > 0: 
+            # include 'amount' and 'value' for transactions with nonzero amounts in portfolio
             final_amount = sum([item[0] for item in transactions[asset]])
             final_holdings[asset] = {
                 'amount': final_amount, 
@@ -114,6 +122,7 @@ def get_portfolio_data(file_name):
             total_realized_pl += current_realized_pl[asset]
             nonzero_assets += 1
         else:
+            # only include 'realized profit/loss' for transactions with zero amount in portfolio
             final_holdings[asset] = {
                 'realized_pl': current_realized_pl[asset]
             }
@@ -136,12 +145,12 @@ def parse_file_name():
     parser = argparse.ArgumentParser(description='Implementation of FIFO calculator.')
     parser.add_argument('file_name', help='Path to CSV file of ledger', default='empty_string')
     args = parser.parse_args()
-    
+
     if args.file_name == 'empty_string':
         print('Error: Missing path to CSV file!')
         return
     if len(args.file_name) < 5 or args.file_name[-4:] != '.csv':
-        print('Error: Invalid path to CSV file!')
+        print('Error: Invalid path! Check to make sure you are including a valid path to a CSV file.')
         return
     return args.file_name
 
